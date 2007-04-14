@@ -4,3 +4,5 @@ Revision history for Perl extension Catalyst::Model::RDBO.
 	- original version; created by h2xs 1.23 with options
 		-AX -n Catalyst::Model::RDBO
 
+0.02    Mon Apr  2 13:43:05 CDT 2007
+    * fix logic in _setup so that manager() can be overridden

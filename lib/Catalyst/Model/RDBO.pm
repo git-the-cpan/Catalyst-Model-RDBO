@@ -5,7 +5,7 @@ use warnings;
 use base 'Catalyst::Model';
 use Carp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 # uncomment this to see the SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
@@ -65,12 +65,14 @@ sub new
 sub _setup
 {
     my $self = shift;
-    my $name = $self->config->{name}
+    my $name = $self->name
       or croak "need to configure a Rose class name";
+    my $mgr = $self->manager
+      or croak "need to configure a Rose manager for $name";
 
     eval "require $name";
     croak $@ if $@;
-    eval "require ${name}::Manager";
+    eval "require $mgr";
     croak $@ if $@;
 }
 
