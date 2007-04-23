@@ -5,9 +5,9 @@ use warnings;
 use base 'Catalyst::Model';
 use Carp;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
-# uncomment this to see the SQL print on stderr
+# uncomment this to see the _get_objects SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
 
 =head1 NAME
@@ -19,10 +19,11 @@ Catalyst::Model::RDBO - base class for Rose::DB::Object model
  package MyApp::Model::Foo;
  use base qw( Catalyst::Model::RDBO );
  
- __PACKAGE__->config(name      => 'My::Rose::Class',
-                    load_with => ['foo']);
-
- # assumes you also have a My::Rose::Class::Manager class
+ __PACKAGE__->config(
+        name      => 'My::Rose::Class',
+        manager   => 'My::Rose::Class::Manager',
+        load_with => ['bar']
+        );
 
  1;
  
@@ -41,6 +42,11 @@ Catalyst Model base class.
 
 =head2 new
 
+Initializes the Model. This method is called by the Catalyst
+setup() method.
+
+See manager() method to understand how that class is handled.
+
 =cut
 
 __PACKAGE__->mk_accessors(qw( context ));
@@ -48,7 +54,6 @@ __PACKAGE__->mk_accessors(qw( context ));
 sub ACCEPT_CONTEXT
 {
     my ($self, $c, @args) = @_;
-
     my $new = bless({%$self}, ref $self);
     $new->context($c);
     return $new;
@@ -67,13 +72,22 @@ sub _setup
     my $self = shift;
     my $name = $self->name
       or croak "need to configure a Rose class name";
+
+    $self->config->{manager} ||= "${name}::Manager";
+
     my $mgr = $self->manager
       or croak "need to configure a Rose manager for $name";
 
     eval "require $name";
     croak $@ if $@;
     eval "require $mgr";
-    croak $@ if $@;
+
+    # don't croak -- just use RDBO::Manager
+    if ($@)
+    {
+        $self->config->{manager} = 'Rose::DB::Object::Manager';
+        require Rose::DB::Object::Manager;
+    }
 }
 
 =head2 name
@@ -90,19 +104,23 @@ sub name
 
 =head2 manager
 
-Returns the C<name> value from config() with C<::Manager> appended.
-This assumes the namespace convention of Rose::DB::Object::Manager,
-so if you do not have a Manager class defined for you RDBO-subclass,
-you should either create one in the expected namespace,
-or override this method to return the actual Manager class name.
+Returns the C<manager> value from config().
+
+If C<manager> is not defined in config(),
+the new() method will attempt to load a class
+named with the C<name> value from config() 
+with C<::Manager> appended.
+This assumes the namespace convention of Rose::DB::Object::Manager.
+
+If there is no such module in your @INC path, then
+the fall-back default is Rose::DB::Object::Manager.
 
 =cut 
 
 sub manager
 {
     my $self = shift;
-    my $name = $self->name;
-    return "${name}::Manager";
+    return $self->config->{manager};
 }
 
 =head2 fetch( @params )
@@ -132,9 +150,7 @@ sub fetch
 {
     my $self = shift;
     my %v    = (@_);
-
     my $name = $self->name;
-
     my $p;
 
     eval { $p = $name->new(%v) };
@@ -250,12 +266,23 @@ sub _get_objects
 {
     my $self    = shift;
     my $method  = shift || 'get_objects';
+    my @args    = @_;
     my $manager = $self->manager;
     my $name    = $self->name;
-    my @args = (
-                object_class => $self->name,
-                @_
-               );
+    my @params  = (object_class => $self->name);
+
+    if (ref $args[0] eq 'HASH')
+    {
+        push(@params, %{$args[0]});
+    }
+    elsif (ref $args[0] eq 'ARRAY')
+    {
+        push(@params, @{$args[0]});
+    }
+    else
+    {
+        push(@params, @args);
+    }
 
     push(@args, with_objects => $self->config->{load_with}, multi_many_ok => 1)
       if $self->config->{load_with};
@@ -272,7 +299,11 @@ __END__
 
 Peter Karman
 
+=head1 CREDITS
+
 Thanks to Atomic Learning, Inc for sponsoring the development of this module.
+
+Thanks to Bill Moseley for API suggestions.
 
 =head1 LICENSE
 

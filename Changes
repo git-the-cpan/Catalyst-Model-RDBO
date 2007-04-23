@@ -6,3 +6,10 @@ Revision history for Perl extension Catalyst::Model::RDBO.
 
 0.02    Mon Apr  2 13:43:05 CDT 2007
     * fix logic in _setup so that manager() can be overridden
+
+0.03    19 April 2007
+    * change _get_objects() to take HASH or ARRAY ref in addition to array.
+    * change manager() to default to Rose::DB::Object::Manager if
+      'manager' key not present in config().
+    * POD clarifications.
+
