@@ -5,7 +5,7 @@ use warnings;
 use base 'Catalyst::Model';
 use Carp;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 # uncomment this to see the _get_objects SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
@@ -284,10 +284,10 @@ sub _get_objects
         push(@params, @args);
     }
 
-    push(@args, with_objects => $self->config->{load_with}, multi_many_ok => 1)
+    push(@params, with_objects => $self->config->{load_with}, multi_many_ok => 1)
       if $self->config->{load_with};
 
-    return $manager->$method(@args);
+    return $manager->$method(@params);
 }
 
 1;

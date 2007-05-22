@@ -13,3 +13,10 @@ Revision history for Perl extension Catalyst::Model::RDBO.
       'manager' key not present in config().
     * POD clarifications.
 
+0.04    22 May 2007
+    * fix (dumb) error in _get_objects() in passing wrong array to $method.
+      The error only manifests if you are using Rose::DB::Object::Manager
+      directly, instead of your own *::Manager subclass.
+
+
+
