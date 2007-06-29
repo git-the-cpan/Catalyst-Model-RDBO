@@ -3,9 +3,9 @@ package Catalyst::Model::RDBO;
 use strict;
 use warnings;
 use base 'Catalyst::Model';
-use Carp;
+use Catalyst::Exception;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 # uncomment this to see the _get_objects SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
@@ -45,19 +45,7 @@ Catalyst Model base class.
 Initializes the Model. This method is called by the Catalyst
 setup() method.
 
-See manager() method to understand how that class is handled.
-
 =cut
-
-__PACKAGE__->mk_accessors(qw( context ));
-
-sub ACCEPT_CONTEXT
-{
-    my ($self, $c, @args) = @_;
-    my $new = bless({%$self}, ref $self);
-    $new->context($c);
-    return $new;
-}
 
 sub new
 {
@@ -70,16 +58,26 @@ sub new
 sub _setup
 {
     my $self = shift;
-    my $name = $self->name
-      or croak "need to configure a Rose class name";
+    my $name = $self->name;
+    if (!$name)
+    {
+        return if $self->throw_error("need to configure a Rose class name");
+    }
 
     $self->config->{manager} ||= "${name}::Manager";
 
-    my $mgr = $self->manager
-      or croak "need to configure a Rose manager for $name";
+    my $mgr = $self->manager;
+    if (!$mgr)
+    {
+        return
+          if $self->throw_error("need to configure a Rose manager for $name");
+    }
 
     eval "require $name";
-    croak $@ if $@;
+    if ($@)
+    {
+        return if $self->throw_error($@);
+    }
     eval "require $mgr";
 
     # don't croak -- just use RDBO::Manager
@@ -123,18 +121,55 @@ sub manager
     return $self->config->{manager};
 }
 
+=head2 create( @params )
+
+Returns new instance of the RDBO object, instantiated with @params.
+Same as calling:
+
+ MyObject->new( @params );
+
+Returns undef if there was any error creating the object. Check
+the context's error() method for any error message. Example:
+
+ my $obj = $c->model('Object')->create( id => 100 );
+ if (!$obj or @{$c->error})
+ {
+     # handle error
+     # ...
+ }
+
+The method is called create() instead of new() because new()
+is a reserved method name in Catalyst::Model subclasses.
+
+=cut
+
+sub create
+{
+    my $self = shift;
+    my $name = $self->name;
+    my $obj;
+    eval { $obj = $name->new(@_) };
+    if ($@ or !$obj)
+    {
+        my $err = defined($obj) ? $obj->error : $@;
+        return if $self->throw_error("can't create new $name object: $err");
+    }
+    return $obj;
+}
+
 =head2 fetch( @params )
 
 If present,
 @I<params> is passed directly to name()'s new() method,
-and is expected to be an array of key/value pairs. In addition,
-the object's load() method is called with the speculative flag.
+and is expected to be an array of key/value pairs.
+Then the load() method is called on the resulting object.
 
-If not present, the new() object is simply returned.
+If @I<params> are not present, the new() object is simply returned,
+which is equivalent to calling create().
 
 All the methods called within fetch() are wrapped in an eval()
 and sanity checked afterwards. If there are any errors,
-the context's error() method is set with the error message.
+throw_error() is called.
 
 Example:
 
@@ -143,85 +178,78 @@ Example:
  {
     # do something to deal with the error
  }
+ 
+B<NOTE:> If the object's presence in the database is questionable,
+your controller code may want to use create() and then call load() yourself
+with the speculative flag. Example:
+
+ my $foo = $c->model('Foo')->create( id => 1234 );
+ $foo->load(speculative => 1);
+ if ($foo->not_found)
+ {
+   # do something
+ }
 
 =cut
 
 sub fetch
 {
     my $self = shift;
-    my %v    = (@_);
-    my $name = $self->name;
-    my $p;
+    my $obj = $self->create(@_) or return;
 
-    eval { $p = $name->new(%v) };
-
-    if ($@ or !$p)
+    if (@_)
     {
-        my $err = defined($p) ? $p->error : $@;
-        my $msg = "can't create new $name object: $err";
-        $self->context->log->error($msg);
-        $self->context->error($msg);
-        return;
-    }
-
-    if (%v)
-    {
-
+        my %v = @_;
         my $ret;
-        my @arg = (speculative => 1);
+        my $name = $self->name;
+        my @arg  = ();
         if ($self->config->{load_with})
         {
             push(@arg, with => $self->config->{load_with});
         }
-        eval { $ret = $p->load(@arg); };
+        eval { $ret = $obj->load(@arg); };
         if ($@ or !$ret)
         {
-            my $err = $@ . "\nno such object";
-            $self->context->log->error($err);
-            $self->context->error($err);
-            return;
+            return if $self->throw_error(join(" : ", $@, "no such $name"));
         }
 
+        # special handling of fetching
+        # e.g. Catalyst::Plugin::Session::Store::DBI records.
         if ($v{id})
         {
 
             # stringify in case it's a char instead of int
             # as is the case with session ids
-            my $pid = $p->id;
+            my $pid = $obj->id;
             $pid =~ s,\s+$,,;
             unless ($pid eq $v{id})
             {
-                my $err =
-                    "Error fetching correct id:\nfetched: $v{id} "
-                  . length($v{id})
-                  . "\nbut got: $pid"
-                  . length($pid);
-                $self->context->log->error($err);
-                $self->context->error($err);
-                return;
+
+                return
+                  if $self->throw_error(
+                                  "Error fetching correct id:\nfetched: $v{id} "
+                                    . length($v{id})
+                                    . "\nbut got: $pid"
+                                    . length($pid));
             }
         }
     }
 
-    return $p;
+    return $obj;
 }
 
 =head2 fetch_all( @params )
 
-@I<params> is passed directly to the Manager get_objects() method.
-See the Rose::DB::Object::Manager documentation.
+Alias for search().
 
-You can also use all().
+=head2 all( @params )
+
+Alias for search().
 
 =cut
 
-sub fetch_all
-{
-    my $self = shift;
-    return $self->_get_objects('get_objects', @_);
-}
-
-*all = \&fetch_all;
+*all       = \&search;
+*fetch_all = \&search;
 
 =head2 search( @params )
 
@@ -284,10 +312,30 @@ sub _get_objects
         push(@params, @args);
     }
 
-    push(@params, with_objects => $self->config->{load_with}, multi_many_ok => 1)
-      if $self->config->{load_with};
+    push(
+         @params,
+         with_objects  => $self->config->{load_with},
+         multi_many_ok => 1
+        ) if $self->config->{load_with};
 
     return $manager->$method(@params);
+}
+
+=head2 throw_error( I<msg> )
+
+Throws Catalyst::Exception. Override to manage errors in some other way.
+
+NOTE that if in your subclass throw_error() is not fatal and instead
+returns a false a value, methods that call it will, be default, continue
+processing instead of returning. See fetch() for an example.
+
+=cut
+
+sub throw_error
+{
+    my $self = shift;
+    my $msg = shift || 'unknown error';
+    Catalyst::Exception->throw($msg);
 }
 
 1;

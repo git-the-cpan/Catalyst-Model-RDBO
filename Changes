@@ -18,5 +18,12 @@ Revision history for Perl extension Catalyst::Model::RDBO.
       The error only manifests if you are using Rose::DB::Object::Manager
       directly, instead of your own *::Manager subclass.
 
+0.05    21 June 2007
+    * refactor fetch() and add new create() method.
+    * fetch_all() and all() were doing exactly what search() does,
+      so just aliased them to search().
+    * use Catalyst::Exception instead of Carp and added throw_error()
+      method to allow for easy overriding.
+    
 
 
