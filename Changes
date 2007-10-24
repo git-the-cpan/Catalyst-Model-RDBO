@@ -25,5 +25,9 @@ Revision history for Perl extension Catalyst::Model::RDBO.
     * use Catalyst::Exception instead of Carp and added throw_error()
       method to allow for easy overriding.
     
+0.06    23 Oct 2007
+    * added Catalyst::Exception to prereq list
+    * updated license/copyright and included note about CatalystX::CRUD::Model::RDBO
+
 
 

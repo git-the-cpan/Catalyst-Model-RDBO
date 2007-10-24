@@ -5,7 +5,7 @@ use warnings;
 use base 'Catalyst::Model';
 use Catalyst::Exception;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 # uncomment this to see the _get_objects SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
@@ -34,7 +34,13 @@ Catalyst::Model::RDBO - base class for Rose::DB::Object model
  
 =head1 DESCRIPTION
 
-Catalyst Model base class.
+Catalyst Model base class for Rose::DB::Object. This class provides
+convenience access to your existing Rose::DB::Object class.
+
+The assumption is one Model class per Rose::DB::Object class.
+
+B<NOTE:> See the newer CatalystX::CRUD::Model::RDBO  
+for a similar module with a similar API.
 
 =head1 METHODS
 
@@ -361,6 +367,6 @@ the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-Rose::DB::Object
+Rose::DB::Object, CatalystX::CRUD::Model::RDBO
 
 =cut

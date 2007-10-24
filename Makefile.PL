@@ -7,7 +7,8 @@ WriteMakefile(
     VERSION_FROM => 'lib/Catalyst/Model/RDBO.pm',    # finds $VERSION
     PREREQ_PM    => {
 
-        'Rose::DB::Object' => 0.01,
+        'Rose::DB::Object' => 0,
+        'Catalyst::Exception' => 0,
 
     },                                               # e.g., Module::Name => 1.1
     (
