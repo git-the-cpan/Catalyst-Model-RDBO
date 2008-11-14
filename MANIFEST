@@ -1,7 +1,7 @@
 Changes
+lib/Catalyst/Model/RDBO.pm
 Makefile.PL
 MANIFEST
 README
 t/Catalyst-Model-RDBO.t
-lib/Catalyst/Model/RDBO.pm
 META.yml                                 Module meta-data (added by MakeMaker)

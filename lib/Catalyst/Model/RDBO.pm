@@ -5,14 +5,14 @@ use warnings;
 use base 'Catalyst::Model';
 use Catalyst::Exception;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 # uncomment this to see the _get_objects SQL print on stderr
 #$Rose::DB::Object::QueryBuilder::Debug = 1;
 
 =head1 NAME
 
-Catalyst::Model::RDBO - base class for Rose::DB::Object model
+Catalyst::Model::RDBO - **DEPRECATED** base class for Rose::DB::Object model
 
 =head1 SYNOPSIS
 
@@ -33,6 +33,8 @@ Catalyst::Model::RDBO - base class for Rose::DB::Object model
  
  
 =head1 DESCRIPTION
+
+B<This package is deprecated. Please use CatalystX::CRUD::Model::RDBO instead.>
 
 Catalyst Model base class for Rose::DB::Object. This class provides
 convenience access to your existing Rose::DB::Object class.

@@ -30,4 +30,6 @@ Revision history for Perl extension Catalyst::Model::RDBO.
     * updated license/copyright and included note about CatalystX::CRUD::Model::RDBO
 
 
+0.07  14 Nov 2008
+    * DEPRECATED
 
